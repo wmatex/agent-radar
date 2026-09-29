@@ -2,7 +2,10 @@
 # shellcheck shell=sh disable=SC1007
 set -eu
 
+# A third argument of `right` prints bare entries for a status-right segment.
+mode=${3:-row}
 label='📡 Agent Radar │ '
+[ "$mode" = right ] && label=''
 command -v tmux >/dev/null 2>&1 || { printf '%s%s\n' "$label" 'cannot read agent state'; exit 0; }
 
 script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd -P) || exit 0
@@ -26,7 +29,7 @@ glance_format="#('$script_dir/agent-radar-glance' '#{session_name}' '#{window_wi
 
 # A cached #() can outlive a row change; stop if the configured row is custom.
 slot=$(tmux show-option -gqv "status-format[$glance_idx]" 2>/dev/null || true)
-if ! agent_radar_glance_row_free "$glance_idx" "$slot"; then
+if [ "$mode" != right ] && ! agent_radar_glance_row_free "$glance_idx" "$slot"; then
     err_sent=$(tmux show-option -gqv @agent-radar-glance-occupied-error 2>/dev/null || true)
     if [ -z "$err_sent" ]; then
         tmux display-message "agent-radar: status line $glance_row is in use; set -g @agent-radar-glance-row M"
@@ -58,6 +61,11 @@ tint_prefix="#[bg=$tint,fill=$tint]#[push-default]"
 tint_suffix='#[pop-default]'
 # 📡 takes two terminal cells; reserve 17 columns for the full label.
 if [ "$width" -gt 17 ]; then width=$((width - 17)); else width=0; fi
+empty='no agent panes'
+if [ "$mode" = right ]; then
+    # tmux clips status-right itself; an empty segment means no agents.
+    tint_prefix='' tint_suffix='' width=999999 empty=''
+fi
 emit() { printf '%s%s%s%s\n' "$tint_prefix" "$label" "$1" "$tint_suffix"; }
 
 records=$(mktemp "${TMPDIR:-/tmp}/agent-radar-glance-records.XXXXXX") || { emit 'cannot read agent state'; exit 0; }
@@ -116,7 +124,7 @@ while IFS= read -r window; do
 done
 
 if [ ! -s "$rows" ]; then
-    emit 'no agent panes'
+    emit "$empty"
     exit 0
 fi
 
@@ -147,7 +155,7 @@ while IFS='|' read -r tier age sortkey pane agent target state stopped_at seen_a
         "$state" "$stopped_at" "$seen_at" "$session" "$win_name" "$branch" >> "$render_input"
 done < "$rows"
 
-LC_ALL=C awk -v fields="$fields" -v width="$width" -v prefix="$tint_prefix" -v suffix="$tint_suffix" -v label="$label" -F '|' '
+LC_ALL=C awk -v fields="$fields" -v width="$width" -v prefix="$tint_prefix" -v suffix="$tint_suffix" -v label="$label" -v empty="$empty" -F '|' '
 function visible(s,    tmp) {
     tmp = s
     gsub(/#\[[^]]*]/, "", tmp)
@@ -222,7 +230,7 @@ function sep()   { return " " dim("·") " " }
 }
 END {
     if (pane_count == 0) {
-        print prefix label "no agent panes" suffix
+        print prefix label empty suffix
         exit
     }
     if (npanes == 0) {

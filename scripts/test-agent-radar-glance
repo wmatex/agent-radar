@@ -299,4 +299,44 @@ grep -F 'set-option -gu @agent-radar-glance-occupied-error' "$log" >/dev/null ||
     echo 'free slot did not clear error flag' >&2; exit 1
 }
 
+# --- right mode: bare entries, no label, tint, width cap or row check ---
+cat > "$env" <<'EOF'
+TMUX_AGENT_RADAR_PANE_%z_AGENT=pi
+TMUX_AGENT_RADAR_PANE_%z_TARGET=zeta:1.0
+TMUX_AGENT_RADAR_PANE_%z_STATE=stopped
+TMUX_AGENT_RADAR_PANE_%z_STOPPED_AT=90
+TMUX_AGENT_RADAR_PANE_%b_AGENT=codex
+TMUX_AGENT_RADAR_PANE_%b_TARGET=beta:2.0
+TMUX_AGENT_RADAR_PANE_%b_STATE=stopped
+TMUX_AGENT_RADAR_PANE_%b_STOPPED_AT=100
+TMUX_AGENT_RADAR_PANE_%b_SEEN_STOPPED_AT=100
+EOF
+: > "$log"
+PATH=$tmp/bin:$PATH TEST_DIR=$tmp AGENT_RADAR_STORE_FILE=$env TMUX_LOG=$log \
+    TEST_SLOT='custom #{pane_index}' AGENT_RADAR_NOW=120 "$glance" work 10 right > "$tmp/out-right"
+{
+    printf '[#[fg=red]●#[default] #[bold]zeta#[default]#[dim]:1.0#[default]]'
+    printf ' '
+    printf '[#[fg=green]●#[default] #[bold]beta#[default]#[dim]:2.0#[default]]\n'
+} > "$tmp/expected-right"
+diff -u "$tmp/expected-right" "$tmp/out-right"
+grep -F 'is in use' "$log" >/dev/null && { echo 'right mode checked the glance row' >&2; exit 1; }
+grep -F 'set-window-option -t work:1 -qu @agent-radar-window-stopped' "$log" >/dev/null || {
+    echo 'right mode skipped the window highlight sync' >&2; exit 1
+}
+
+# right mode with no agent panes prints nothing
+: > "$env"
+PATH=$tmp/bin:$PATH TEST_DIR=$tmp AGENT_RADAR_STORE_FILE=$env TMUX_LOG=$log \
+    AGENT_RADAR_NOW=120 "$glance" work 200 right > "$tmp/out-right-empty"
+[ -z "$(cat "$tmp/out-right-empty")" ] || { echo 'right mode printed text with no agents' >&2; exit 1; }
+
+# right mode still reports a failed read
+(
+    PATH=$tmp/corebin
+    AGENT_RADAR_STORE_FILE=$env TMUX_LOG=$log AGENT_RADAR_NOW=120 "$glance" work 200 right > "$tmp/out-right-err"
+)
+printf 'cannot read agent state\n' > "$tmp/expected-right-err"
+diff -u "$tmp/expected-right-err" "$tmp/out-right-err"
+
 printf 'agent-radar-glance ok\n'

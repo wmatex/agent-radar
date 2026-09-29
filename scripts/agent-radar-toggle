@@ -21,6 +21,16 @@ glance_idx=$((glance_row - 1))
 glance_format="#('$glance_cmd' '#{session_name}' '#{window_width}')"
 . "$script_dir/agent-radar-glance-row"
 
+# In right mode the glance lives in the user's status-right; toggle only its segment.
+if [ "$(opt @agent-radar-glance on)" = right ]; then
+    if [ -n "$(opt @agent-radar-glance-segment '')" ]; then
+        tmux set-option -gu @agent-radar-glance-segment
+    else
+        tmux set-option -gq @agent-radar-glance-segment "#('$glance_cmd' '#{session_name}' '#{window_width}' right)"
+    fi
+    exit 0
+fi
+
 state=$(opt @agent-radar-glance-state off)
 
 case "$state" in

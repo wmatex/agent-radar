@@ -21,6 +21,8 @@ case "$1" in
         ;;
     show-option)
         case "$3" in
+            @agent-radar-glance) printf '%s\n' "${TEST_GLANCE:-on}" ;;
+            @agent-radar-glance-segment) printf '%s\n' "${TEST_SEGMENT:-}" ;;
             @agent-radar-glance-state) printf '%s\n' "${TEST_STATE:-off}" ;;
             @agent-radar-glance-row) printf '%s\n' "${TEST_ROW:-2}" ;;
             @agent-radar-glance-orig-status) printf '%s\n' "${TEST_ORIG_STATUS:-}" ;;
@@ -145,5 +147,21 @@ PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_STATE=on TEST_STATUS=2 TEST_ORIG_STATUS=1
 grep -F "set-option -g status-format[1] $stock_37" "$log" >/dev/null || {
     echo 'toggle off did not restore the kept row text' >&2; exit 1
 }
+
+# --- right mode: toggle the segment, never the row ---
+segment="#('$script_dir/agent-radar-glance' '#{session_name}' '#{window_width}' right)"
+: > "$log"
+PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_GLANCE=right "$toggle"
+grep -F "set-option -gq @agent-radar-glance-segment $segment" "$log" >/dev/null || {
+    echo 'toggle right did not set the segment' >&2; exit 1
+}
+: > "$log"
+PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_GLANCE=right TEST_SEGMENT="$segment" "$toggle"
+grep -F 'set-option -gu @agent-radar-glance-segment' "$log" >/dev/null || {
+    echo 'toggle right did not unset the segment' >&2; exit 1
+}
+if grep -F 'status' "$log" | grep -v 'glance-segment' >/dev/null; then
+    echo 'toggle right touched the status row' >&2; exit 1
+fi
 
 printf 'agent-radar-toggle ok\n'

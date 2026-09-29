@@ -38,6 +38,7 @@ case "$glance_row" in
 esac
 glance_idx=$((glance_row - 1))
 glance_format="#('$current_dir/scripts/agent-radar-glance' '#{session_name}' '#{window_width}')"
+glance_segment="#('$current_dir/scripts/agent-radar-glance' '#{session_name}' '#{window_width}' right)"
 . "$current_dir/scripts/agent-radar-glance-row"
 
 if [ "$glance" = on ]; then
@@ -66,7 +67,7 @@ if [ "$glance" = on ]; then
         tmux display-message "agent-radar: status line $glance_row is in use; set -g @agent-radar-glance-row M"
     fi
 else
-    # Setting is off: teardown any live glance we previously installed.
+    # Setting is off or right: teardown any live glance row we previously installed.
     current_slot=$(tmux show-option -gqv "status-format[$glance_idx]" 2>/dev/null || true)
     case "$current_slot" in
         "$glance_format")
@@ -89,6 +90,13 @@ else
             ;;
     esac
     tmux set-option -gu @agent-radar-glance-state 2>/dev/null || true
+fi
+
+# `right` exports the glance for the user's own status-right: #{E:@agent-radar-glance-segment}
+if [ "$glance" = right ]; then
+    tmux set-option -gq @agent-radar-glance-segment "$glance_segment"
+else
+    tmux set-option -gu @agent-radar-glance-segment 2>/dev/null || true
 fi
 
 popup_key=$(opt @agent-radar-key a)

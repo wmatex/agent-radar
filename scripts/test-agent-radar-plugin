@@ -204,4 +204,36 @@ grep -F 'set-option -g status-format[1] future default' "$log" >/dev/null || {
     echo 'teardown without kept text did not restore this tmux default' >&2; exit 1
 }
 
+# --- on and off both unset the status-right segment ---
+for mode in on off; do
+    : > "$log"
+    PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_GLANCE=$mode "$repo_dir/agent-radar.tmux"
+    grep -F 'set-option -gu @agent-radar-glance-segment' "$log" >/dev/null || {
+        echo "glance $mode did not unset the segment" >&2; exit 1
+    }
+done
+
+# --- right exports the segment and leaves the row alone ---
+segment="#('$repo_dir/scripts/agent-radar-glance' '#{session_name}' '#{window_width}' right)"
+: > "$log"
+PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_GLANCE=right "$repo_dir/agent-radar.tmux"
+grep -F "set-option -gq @agent-radar-glance-segment $segment" "$log" >/dev/null || {
+    echo 'glance right did not export the segment' >&2; exit 1
+}
+if grep -F 'status-format[1]' "$log" >/dev/null || grep -F 'set-option -g status 2' "$log" >/dev/null; then
+    echo 'glance right touched the status row' >&2; exit 1
+fi
+
+# --- switching on -> right releases the row it held ---
+: > "$log"
+PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_GLANCE=right TEST_STATUS=2 TEST_ORIG_STATUS=on \
+    TEST_SLOT="#('$repo_dir/scripts/agent-radar-glance' '#{session_name}' '#{window_width}')" \
+    "$repo_dir/agent-radar.tmux"
+grep -F 'set-option -g status-format[1] #[align=centre]' "$log" >/dev/null || {
+    echo 'glance right did not release the row' >&2; exit 1
+}
+grep -F 'set-option -g status on' "$log" >/dev/null || {
+    echo 'glance right did not lower status' >&2; exit 1
+}
+
 printf 'agent-radar-plugin ok\n'

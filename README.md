@@ -129,12 +129,27 @@ With `status on`, tmux shows one status row. While the glance row is on,
 agent-radar raises it to two. If you already use custom status rows, keep your
 own count and pick a free row with `@agent-radar-glance-row`.
 
+To keep a single status row, put the agent list in your own `status-right`
+instead:
+
+```tmux
+set -g @agent-radar-glance right
+set -g status-right '#{E:@agent-radar-glance-segment} %H:%M'
+set -g status-right-length 120
+```
+
+In `right` mode agent-radar adds no row and never writes `status-right`. It sets
+`@agent-radar-glance-segment`, and you place it. The segment shows the same
+bracketed entries as the row, without the label or tint, and is empty when there
+are no agent panes. tmux cuts `status-right` at `status-right-length` (default
+40), so raise it to fit.
+
 ## Usage
 
 | Key | Action |
 |-----|--------|
 | `prefix + a` | Open the navigator, pick an agent, and jump to its pane. |
-| `prefix + A` | Show or hide the glance row for the running tmux server. It doesn't change `@agent-radar-glance`; sourcing your config restores that setting. |
+| `prefix + A` | Show or hide the glance row (or the `right` segment) for the running tmux server. It doesn't change `@agent-radar-glance`; sourcing your config restores that setting. |
 
 ### Glance row
 
@@ -209,7 +224,7 @@ loads.
 | `@agent-radar-poll-interval` | `2` | Seconds between polls. |
 | `@agent-radar-notify` | `on` | Send an OS notification when an agent pane stops. `off` turns it off, independently of `@agent-radar-sound`. |
 | `@agent-radar-sound` | `off` | Also play a short sound when an agent stops (`on` to enable). Plays at most one sound every 3 seconds across all panes. Needs `afplay` (macOS) or `canberra-gtk-play`/`paplay` (Linux), and does nothing if none is found. |
-| `@agent-radar-glance` | `on` | Whether the glance row is on when the plugin loads or the config is sourced. `prefix + A` only changes the live state. |
+| `@agent-radar-glance` | `on` | Glance mode when the plugin loads or the config is sourced: `on` for the glance row, `right` to set `@agent-radar-glance-segment` for your own `status-right`, `off` for neither. `prefix + A` only changes the live state. |
 | `@agent-radar-glance-fields` | `dot,target` | Comma-separated fields, in display order: `dot`, `target` (`session:window.pane`), `harness`, `session`, `window`, `branch` (`⎇ name` from Git in the pane's directory, or `-`), `age` (stopped panes only). Unknown fields are skipped. |
 | `@agent-radar-glance-tint` | `@thm_surface_0` if set, else `colour8` | Background of the glance row only. Accepts a tmux color (`#RRGGBB`, `colourN`, a color name), a global palette option such as `@thm_mantle`, or `default` to use the theme's status background. Palette options are read when the row is drawn, so a theme can load after this setting. |
 | `@agent-radar-glance-row` | `2` | Which status row to use, counting from 1 (row 2 is `status-format[1]`). A custom row that's already in use isn't overwritten. |
