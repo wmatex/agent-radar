@@ -299,6 +299,14 @@ grep -F 'set-option -gu @agent-radar-glance-occupied-error' "$log" >/dev/null ||
     echo 'free slot did not clear error flag' >&2; exit 1
 }
 
+# --- a glance row written from another install path is not "in use" ---
+: > "$log"
+PATH=$tmp/bin:$PATH TEST_DIR=$tmp AGENT_RADAR_STORE_FILE=$env TMUX_LOG=$log \
+    TEST_SLOT="#('/old/plugins/agent-radar/scripts/agent-radar-glance' '#{session_name}' '#{window_width}')" \
+    AGENT_RADAR_NOW=120 "$glance" work 200 > "$tmp/out-old-path"
+grep -F 'is in use' "$log" >/dev/null && { echo 'glance rejected its own row from another path' >&2; exit 1; }
+[ -n "$(cat "$tmp/out-old-path")" ] || { echo 'glance from another path rendered nothing' >&2; exit 1; }
+
 # --- right mode: bare entries, no label, tint, width cap or row check ---
 cat > "$env" <<'EOF'
 TMUX_AGENT_RADAR_PANE_%z_AGENT=pi

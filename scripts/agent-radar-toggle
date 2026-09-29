@@ -36,11 +36,9 @@ state=$(opt @agent-radar-glance-state off)
 case "$state" in
     on)
         slot=$(tmux show-option -gqv "status-format[$glance_idx]" 2>/dev/null || true)
-        case "$slot" in
-            "$glance_format")
-                agent_radar_glance_row_release "$glance_idx"
-                ;;
-        esac
+        if agent_radar_glance_row_ours "$slot"; then
+            agent_radar_glance_row_release "$glance_idx"
+        fi
 
         current_status=$(tmux show-option -gqv status 2>/dev/null || true)
         orig_status=$(tmux show-option -gqv @agent-radar-glance-orig-status 2>/dev/null || true)

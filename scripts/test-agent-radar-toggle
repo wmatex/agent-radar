@@ -148,6 +148,15 @@ grep -F "set-option -g status-format[1] $stock_37" "$log" >/dev/null || {
     echo 'toggle off did not restore the kept row text' >&2; exit 1
 }
 
+# --- on -> off: release a glance row written from another install path ---
+: > "$log"
+PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_STATE=on TEST_STATUS=2 TEST_ORIG_STATUS=1 \
+    TEST_SLOT="#('/old/plugins/agent-radar/scripts/agent-radar-glance' '#{session_name}' '#{window_width}')" \
+    "$toggle"
+grep -F 'set-option -g status-format[1] #[align=centre]' "$log" >/dev/null || {
+    echo 'toggle off did not release a row from another install path' >&2; exit 1
+}
+
 # --- right mode: toggle the segment, never the row ---
 segment="#('$script_dir/agent-radar-glance' '#{session_name}' '#{window_width}' right)"
 : > "$log"

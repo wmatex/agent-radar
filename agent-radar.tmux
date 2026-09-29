@@ -48,7 +48,7 @@ if [ "$glance" = on ]; then
 
         current_status=$(tmux show-option -gqv status 2>/dev/null || true)
         orig_status=$(tmux show-option -gqv @agent-radar-glance-orig-status 2>/dev/null || true)
-        if [ "$current_slot" != "$glance_format" ] || [ -z "$orig_status" ]; then
+        if ! agent_radar_glance_row_ours "$current_slot" || [ -z "$orig_status" ]; then
             tmux set-option -gq @agent-radar-glance-orig-status "$current_status"
         fi
         case "$current_status" in
@@ -69,26 +69,24 @@ if [ "$glance" = on ]; then
 else
     # Setting is off or right: teardown any live glance row we previously installed.
     current_slot=$(tmux show-option -gqv "status-format[$glance_idx]" 2>/dev/null || true)
-    case "$current_slot" in
-        "$glance_format")
-            agent_radar_glance_row_release "$glance_idx"
+    if agent_radar_glance_row_ours "$current_slot"; then
+        agent_radar_glance_row_release "$glance_idx"
 
-            current_status=$(tmux show-option -gqv status 2>/dev/null || true)
-            orig_status=$(tmux show-option -gqv @agent-radar-glance-orig-status 2>/dev/null || true)
-            if [ "$current_status" = "$glance_row" ]; then
-                case "$orig_status" in
-                    ''|on|1)
-                        tmux set-option -g status on
-                        ;;
-                    [0-9]*)
-                        if [ "$orig_status" -lt "$glance_row" ] 2>/dev/null; then
-                            tmux set-option -g status "$orig_status"
-                        fi
-                        ;;
-                esac
-            fi
-            ;;
-    esac
+        current_status=$(tmux show-option -gqv status 2>/dev/null || true)
+        orig_status=$(tmux show-option -gqv @agent-radar-glance-orig-status 2>/dev/null || true)
+        if [ "$current_status" = "$glance_row" ]; then
+            case "$orig_status" in
+                ''|on|1)
+                    tmux set-option -g status on
+                    ;;
+                [0-9]*)
+                    if [ "$orig_status" -lt "$glance_row" ] 2>/dev/null; then
+                        tmux set-option -g status "$orig_status"
+                    fi
+                    ;;
+            esac
+        fi
+    fi
     tmux set-option -gu @agent-radar-glance-state 2>/dev/null || true
 fi
 

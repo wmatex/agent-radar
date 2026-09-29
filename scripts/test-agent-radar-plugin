@@ -236,4 +236,21 @@ grep -F 'set-option -g status on' "$log" >/dev/null || {
     echo 'glance right did not lower status' >&2; exit 1
 }
 
+# --- a glance row written from another install path is still ours ---
+: > "$log"
+PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_GLANCE=right TEST_STATUS=2 TEST_ORIG_STATUS=on \
+    TEST_SLOT="#('/old/plugins/agent-radar/scripts/agent-radar-glance' '#{session_name}' '#{window_width}')" \
+    "$repo_dir/agent-radar.tmux"
+grep -F 'set-option -g status-format[1] #[align=centre]' "$log" >/dev/null || {
+    echo 'glance right did not release a row from another install path' >&2; exit 1
+}
+: > "$log"
+PATH=$tmp/bin:$PATH TMUX_LOG=$log TEST_STATUS=2 TEST_ORIG_STATUS=on \
+    TEST_SLOT="#('/old/plugins/agent-radar/scripts/agent-radar-glance' '#{session_name}' '#{window_width}')" \
+    "$repo_dir/agent-radar.tmux"
+grep -F 'is in use' "$log" >/dev/null && { echo 'glance on rejected a row from another install path' >&2; exit 1; }
+grep -F 'set-option -gq @agent-radar-glance-orig-format' "$log" >/dev/null && {
+    echo 'claim kept an old glance row as the text to restore' >&2; exit 1
+}
+
 printf 'agent-radar-plugin ok\n'

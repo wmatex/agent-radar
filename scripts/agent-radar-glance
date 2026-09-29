@@ -23,8 +23,6 @@ case "$glance_row" in
     ''|*[!0-9]*) glance_row=2 ;;
 esac
 glance_idx=$((glance_row - 1))
-# shellcheck disable=SC2034 # read by agent-radar-glance-row
-glance_format="#('$script_dir/agent-radar-glance' '#{session_name}' '#{window_width}')"
 . "$script_dir/agent-radar-glance-row"
 
 # A cached #() can outlive a row change; stop if the configured row is custom.

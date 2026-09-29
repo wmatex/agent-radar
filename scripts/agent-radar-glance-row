@@ -1,6 +1,6 @@
 # shellcheck shell=sh disable=SC2154 # glance_format comes from the caller
 # Shared ownership rules for the glance row's status-format slot.
-# Callers set glance_format to their exact glance row format before calling these.
+# Callers set glance_format to the glance row format that claim writes.
 
 # tmux's built-in status-format[1]: the pane-size list before 3.7, the pane list from 3.7.
 agent_radar_glance_row_stock_pre37='#[align=centre]#{P:#{?pane_active,#[reverse],}#{pane_index}[#{pane_width}x#{pane_height}]#[default] }'
@@ -13,17 +13,26 @@ agent_radar_glance_row_default() {
     rm -rf "$_ar_probe_dir"
 }
 
+# Succeed when $1 is a glance row format, from this or any other install path.
+agent_radar_glance_row_ours() {
+    case "$1" in
+        "#('"*"/agent-radar-glance' '#{session_name}' '#{window_width}')") return 0 ;;
+    esac
+    return 1
+}
+
 # Succeed when status-format[$1], holding $2, is empty, the glance, or tmux's built-in text.
 agent_radar_glance_row_free() {
+    agent_radar_glance_row_ours "$2" && return 0
     case "$2" in
-        ''|"$glance_format"|"$agent_radar_glance_row_stock_pre37"|"$agent_radar_glance_row_stock_37") return 0 ;;
+        ''|"$agent_radar_glance_row_stock_pre37"|"$agent_radar_glance_row_stock_37") return 0 ;;
     esac
     [ "$2" = "$(agent_radar_glance_row_default "$1")" ]
 }
 
 # Write the glance into status-format[$1], remembering its previous text $2 for release.
 agent_radar_glance_row_claim() {
-    if [ "$2" != "$glance_format" ]; then
+    if ! agent_radar_glance_row_ours "$2"; then
         tmux set-option -gq @agent-radar-glance-orig-format "$2"
     fi
     tmux set-option -g "status-format[$1]" "$glance_format"
