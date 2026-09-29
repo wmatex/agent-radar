@@ -9,10 +9,10 @@ trap 'rm -rf "$tmp"' EXIT INT TERM HUP
 records=$tmp/records
 env=$tmp/env
 cat > "$records" <<'EOF'
-%z|pi|zeta:1.0|||stopped|90|
-%a|claude|alpha:1.0|||running||
-%b|codex|beta:1.0|||stopped|100|100
-%m|pi|middle:1.0|||stopped|95|
+%z|pi|zeta:1.0||stopped|90|
+%a|claude|alpha:1.0||running||
+%b|codex|beta:1.0||stopped|100|100
+%m|pi|middle:1.0||stopped|95|
 EOF
 cat > "$env" <<'EOF'
 TMUX_AGENT_RADAR_PANE_%z_AGENT=pi
@@ -42,7 +42,7 @@ cat > "$tmp/expected-classified" <<'EOF'
 EOF
 diff -u "$tmp/expected-classified" "$tmp/classified"
 
-printf '%%s|pi|s:1|||stopped|9970|\n%%m|pi|m:1|||stopped|9700|\n%%h|pi|h:1|||stopped|4600|\n%%i|pi|i:1|||stopped|2800|\n' |
+printf '%%s|pi|s:1||stopped|9970|\n%%m|pi|m:1||stopped|9700|\n%%h|pi|h:1||stopped|4600|\n%%i|pi|i:1||stopped|2800|\n' |
     "$classify" 10000 |
     awk -F '|' '{print $2}' > "$tmp/ages"
 {

@@ -1,6 +1,6 @@
 # Shared column contract for agent-radar-store records output.
 # Record rows are: PANE, then these tmux-environment fields in order.
-agent_radar_record_fields='AGENT TARGET LAST_CHANGE ARMED STATE STOPPED_AT SEEN_STOPPED_AT'
+agent_radar_record_fields='AGENT TARGET LAST_CHANGE STATE STOPPED_AT SEEN_STOPPED_AT'
 
 agent_radar_record_column_vars() {
     i=1

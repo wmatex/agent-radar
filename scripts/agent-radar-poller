@@ -6,7 +6,6 @@ script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd -P) || exit 0
 store_cmd=$script_dir/agent-radar-store
 transition_cmd=$script_dir/agent-radar-transition
 match_cmd=$script_dir/agent-radar-match
-throttle_file="${AGENT_RADAR_SOUND_THROTTLE_FILE:-}"
 . "$script_dir/agent-radar-record-columns"
 eval "$(agent_radar_record_column_vars)"
 
@@ -31,7 +30,7 @@ pid_unset() {
     tmux set-option -gqu @agent-radar-pid 2>/dev/null || true
 }
 
-# Read the last_change|armed|state hot-loop fields for a pane in ONE awk pass.
+# Read the last_change|state hot-loop fields for a pane in ONE awk pass.
 # ponytail: consumes the store's shared records() pipe contract; a per-field
 # store subcommand would refork tmux and undo 011's latency win.
 record_hot() {
@@ -39,9 +38,8 @@ record_hot() {
         -v pane="$1" \
         -v col_pane="$agent_radar_record_col_pane" \
         -v col_last="$agent_radar_record_col_last_change" \
-        -v col_armed="$agent_radar_record_col_armed" \
         -v col_state="$agent_radar_record_col_state" \
-        '$col_pane == pane { print $col_last "|" $col_armed "|" $col_state; exit }' \
+        '$col_pane == pane { print $col_last "|" $col_state; exit }' \
         "$records_file"
 }
 
@@ -99,48 +97,6 @@ agent_for_tty() {
     done
 }
 
-notify_stopped() {
-    if [ "$(opt @agent-radar-notify on)" = on ]; then
-        if [ "$(uname -s 2>/dev/null || true)" = Darwin ] && command -v osascript >/dev/null 2>&1; then
-            osascript - "$1" "$2" <<'APPLESCRIPT' >/dev/null 2>&1 &
-on run argv
-  display notification (item 2 of argv) with title ("agent-radar: " & item 1 of argv & " stopped")
-end run
-APPLESCRIPT
-        elif command -v notify-send >/dev/null 2>&1; then
-            notify-send "agent-radar: $1 stopped" "$2" >/dev/null 2>&1 &
-        fi
-    fi
-
-    [ "$(opt @agent-radar-sound off)" = on ] || return 0
-
-    if [ -n "$throttle_file" ]; then
-        last_sound=$(stat -c %Y "$throttle_file" 2>/dev/null || stat -f %m "$throttle_file" 2>/dev/null || true)
-        if [ -n "$last_sound" ]; then
-            elapsed=$(($(date +%s) - last_sound))
-            if [ "$elapsed" -lt 3 ]; then
-                return 0
-            fi
-        fi
-        touch "$throttle_file" 2>/dev/null || true
-    fi
-
-    if [ "$(uname -s 2>/dev/null || true)" = Darwin ] && command -v afplay >/dev/null 2>&1; then
-        afplay /System/Library/Sounds/Ping.aiff >/dev/null 2>&1 &
-        return 0
-    fi
-
-    if command -v canberra-gtk-play >/dev/null 2>&1; then
-        canberra-gtk-play -i complete >/dev/null 2>&1 &
-        return 0
-    elif command -v paplay >/dev/null 2>&1; then
-        paplay /usr/share/sounds/freedesktop/stereo/complete.oga >/dev/null 2>&1 &
-        return 0
-    fi
-
-    return 0
-}
-
 valid_number() {
     case "$1" in
         ''|*[!0-9]*) return 1 ;;
@@ -171,29 +127,22 @@ poll_once() {
         if detect_working "$pane"; then working=1; fi
         printf '%s\n' "$pane" >> "$present_panes"
 
-        last=; armed=; state=
-        IFS='|' read -r last armed state <<EOF
+        last=; state=
+        IFS='|' read -r last state <<EOF
 $(record_hot "$pane")
 EOF
 
         set_pane "$pane" agent "$agent"
         set_pane "$pane" target "$target"
 
-        next_state=; next_last=; next_armed=; stopped_at=; notify=
-        IFS='|' read -r next_state next_last next_armed stopped_at notify <<EOF
-$(printf '%s|%s|%s|%s|%s|%s\n' "$state" "$last" "$armed" "$working" "$now" "$idle" | "$transition_cmd")
+        next_state=; next_last=; stopped_at=
+        IFS='|' read -r next_state next_last stopped_at <<EOF
+$(printf '%s|%s|%s|%s|%s\n' "$state" "$last" "$working" "$now" "$idle" | "$transition_cmd")
 EOF
 
         set_pane "$pane" last_change "$next_last"
-        set_pane "$pane" armed "$next_armed"
         set_pane "$pane" state "$next_state"
         set_pane "$pane" stopped_at "$stopped_at"
-        # ponytail: no active-pane guard — tmux "active pane" != OS focus, so
-        # guarding on it swallowed exactly the toasts you want while away. The
-        # status segment already covers the "you're here" case (seen-on-focus).
-        if [ "$notify" = 1 ]; then
-            notify_stopped "$agent" "$target"
-        fi
     done
 
     cut -d '|' -f 1 "$records_file" |
@@ -211,12 +160,9 @@ start() {
         exit 0
     fi
 
-    if [ -z "$throttle_file" ]; then
-        throttle_file=$(mktemp "${TMPDIR:-/tmp}/agent-radar-sound-throttle.XXXXXX") || exit 1
-    fi
     # Arm the trap before pid_set: publishing the pid first leaves a window
     # where a stop signal kills the daemon without clearing @agent-radar-pid.
-    trap 'rm -f "$throttle_file"; pid_unset "$$"; exit 0' INT TERM HUP EXIT
+    trap 'pid_unset "$$"; exit 0' INT TERM HUP EXIT
     pid_set "$$"
 
     # ponytail: list-sessions only needs the server, not an attached client;

@@ -17,7 +17,6 @@ TMUX_AGENT_RADAR_PANE_%1_STATE=stopped
 TMUX_AGENT_RADAR_PANE_%1_AGENT=pi
 TMUX_AGENT_RADAR_PANE_%2_STATE=running
 TMUX_AGENT_RADAR_PANE_%1_LAST_CHANGE=100
-TMUX_AGENT_RADAR_PANE_%1_ARMED=1
 TMUX_AGENT_RADAR_PANE_%2_AGENT=claude
 EOF
 
@@ -34,8 +33,8 @@ chmod +x "$tmp/bin/tmux"
 
 PATH=$tmp/bin:$PATH AGENT_RADAR_STORE_FILE=$fixture TMUX_LOG=$log "$store" records > "$tmp/records"
 cat > "$tmp/expected" <<'EOF'
-%1|pi|work:0.1|100|1|stopped|100|100
-%2|claude|other:1.0|||running||
+%1|pi|work:0.1|100|stopped|100|100
+%2|claude|other:1.0||running||
 EOF
 diff -u "$tmp/expected" "$tmp/records"
 

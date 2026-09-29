@@ -46,17 +46,12 @@ the ones that have no hooks.
       to jump to its exact <code>session:window.pane</code>.
     </td>
     <td width="33%" valign="top">
-      <h4>🔔 Notifications</h4>
-      You get one OS notification each time an agent stops. A short sound is
-      optional.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
       <h4>🟥 Window highlight</h4>
       A window with a stopped agent you haven't looked at stays highlighted until
       you focus that agent's pane.
     </td>
+  </tr>
+  <tr>
     <td valign="top">
       <h4>🧩 Any harness</h4>
       No hooks needed. agent-radar reads each harness's working indicator from
@@ -87,9 +82,7 @@ agent needs you.
 
 ## Install
 
-Requirements: `tmux` and `fzf` (for the navigator). For OS notifications you
-also need `osascript` on macOS or `notify-send` on Linux. Without them the
-glance row and window highlighting still work.
+Requirements: `tmux` and `fzf` (for the navigator).
 
 Set any options **before** loading the plugin. Don't load it twice.
 
@@ -222,8 +215,6 @@ loads.
 | `@agent-radar-processes` | `pi,claude,codex,opencode,hermes,aider,cursor` | Comma-separated agent executable names to detect. Script- and launcher-based agents (`hermes`, `opencode` via `uvx`, …) are also matched by their command-line arguments. |
 | `@agent-radar-idle-seconds` | `3` | Seconds with no working indicator before a pane counts as stopped. This is the main timing setting to tune. |
 | `@agent-radar-poll-interval` | `2` | Seconds between polls. |
-| `@agent-radar-notify` | `on` | Send an OS notification when an agent pane stops. `off` turns it off, independently of `@agent-radar-sound`. |
-| `@agent-radar-sound` | `off` | Also play a short sound when an agent stops (`on` to enable). Plays at most one sound every 3 seconds across all panes. Needs `afplay` (macOS) or `canberra-gtk-play`/`paplay` (Linux), and does nothing if none is found. |
 | `@agent-radar-glance` | `on` | Glance mode when the plugin loads or the config is sourced: `on` for the glance row, `right` to set `@agent-radar-glance-segment` for your own `status-right`, `off` for neither. `prefix + A` only changes the live state. |
 | `@agent-radar-glance-fields` | `dot,target` | Comma-separated fields, in display order: `dot`, `target` (`session:window.pane`), `harness`, `session`, `window`, `branch` (`⎇ name` from Git in the pane's directory, or `-`), `age` (stopped panes only). Unknown fields are skipped. |
 | `@agent-radar-glance-tint` | `@thm_surface_0` if set, else `colour8` | Background of the glance row only. Accepts a tmux color (`#RRGGBB`, `colourN`, a color name), a global palette option such as `@thm_mantle`, or `default` to use the theme's status background. Palette options are read when the row is drawn, so a theme can load after this setting. |
